@@ -1,0 +1,8 @@
+
+/target/
+/out/
+/lib/
+/tmp/
+/.idea/
+/cvs/
+/dependency-reduced-pom.xml
