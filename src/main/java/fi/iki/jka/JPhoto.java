@@ -20,8 +20,6 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.awt.image.ConvolveOp;
-import java.awt.image.Kernel;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -37,12 +35,10 @@ import java.util.Properties;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
-import javax.imageio.stream.ImageOutputStream;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import javax.imageio.*;
 
-import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.jpeg.JpegMetadataReader;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
@@ -200,17 +196,11 @@ public class JPhoto extends Observable implements Transferable, Serializable {
         if (fullImage!=null && fullImagePhoto==this)
             im = (BufferedImage)fullImage.get();
 
-        ImageReader imageReader = null;
         if (im==null) {
             try {
                 long ticks = System.currentTimeMillis();
                 System.out.println("Loading "+getOriginalFile()+"...");
                 String suffix = Utils.getFileExt(getOriginalFile().getName(), "jpg");
-//                Iterator readers = ImageIO.getImageReadersBySuffix(suffix);
-//                imageReader = (ImageReader)readers.next();
-//                imageReader.setInput(new FileImageInputStream(getOriginalFile()));
-//                im = imageReader.read(0);
-//                imageReader.dispose();
                 im = readImage(getOriginalFile());
                 JPhotoStatus.showStatus(null, getOriginalFile()+" loaded in "+(System.currentTimeMillis()-ticks)+"ms. ");
                 
@@ -255,8 +245,6 @@ public class JPhoto extends Observable implements Transferable, Serializable {
                 fullImagePhoto = this;
             }
             catch (Throwable e) {
-                if (imageReader!=null)
-                    imageReader.dispose();
                 setStatus(e.toString());
                 badFile = true;
                 JPhotoStatus.showStatus(null, "Cannot load "+getOriginalFile()+":"+e);
@@ -482,7 +470,7 @@ public class JPhoto extends Observable implements Transferable, Serializable {
                 exif = new JPhotoExif(directory);
                 if (getText()==null || getText().equals("")) { // initialise image text from IPTC if nothing else available
                     IptcDirectory iptc = getIptcDirectory();
-                    try {
+                    if (iptc!=null) try {
                         byte[] bytes = iptc.getByteArray(IptcDirectory.TAG_CAPTION);
                         if (bytes==null || bytes.length<1)
                             bytes = directory.getByteArray(TAG_IMAGE_DESCRIPTION);
@@ -585,7 +573,7 @@ public class JPhoto extends Observable implements Transferable, Serializable {
     public byte[] getThumbData() {
         byte[] thumbnailData = null;
         ExifThumbnailDirectory dir = metadata.getDirectory(ExifThumbnailDirectory.class);
-        if (dir.hasThumbnailData()) {
+        if (dir!=null && dir.hasThumbnailData()) {
             thumbnailData = dir.getThumbnailData();
         }
         return thumbnailData;
